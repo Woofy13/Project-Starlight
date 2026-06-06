@@ -1,24 +1,13 @@
-import { useState } from "react";
+import {
+  useListServers,
+  useUpdateServerStatus,
+  getListServersQueryKey,
+} from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 
-type Status = "on" | "off";
-
-interface Server {
-  id: string;
-  name: string;
-  status: Status;
-  timestamp: Date | null;
-}
-
-const initialServers: Server[] = [
-  { id: "mio", name: "Mio", status: "off", timestamp: null },
-  { id: "bo", name: "Bo", status: "off", timestamp: null },
-  { id: "aaryn", name: "Aaryn", status: "off", timestamp: null },
-  { id: "new-tunes", name: "New Tunes", status: "off", timestamp: null },
-];
-
-function formatTimestamp(date: Date | null): string {
-  if (!date) return "—";
-  return date.toLocaleString(undefined, {
+function formatTimestamp(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString(undefined, {
     year: "numeric",
     month: "short",
     day: "2-digit",
@@ -29,16 +18,18 @@ function formatTimestamp(date: Date | null): string {
 }
 
 export default function App() {
-  const [servers, setServers] = useState<Server[]>(initialServers);
+  const queryClient = useQueryClient();
+  const { data: servers, isLoading } = useListServers();
+  const updateStatus = useUpdateServerStatus({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListServersQueryKey() });
+      },
+    },
+  });
 
-  function handleStatusChange(id: string, newStatus: Status) {
-    setServers((prev) =>
-      prev.map((s) =>
-        s.id === id
-          ? { ...s, status: newStatus, timestamp: new Date() }
-          : s
-      )
-    );
+  function handleStatusChange(id: string, newStatus: string) {
+    updateStatus.mutate({ id, data: { status: newStatus } });
   }
 
   return (
@@ -73,10 +64,17 @@ export default function App() {
               </tr>
             </thead>
             <tbody>
-              {servers.map((server, idx) => (
+              {isLoading && (
+                <tr>
+                  <td colSpan={3} className="px-8 py-8 text-center timestamp-text text-sm">
+                    Loading servers…
+                  </td>
+                </tr>
+              )}
+              {servers?.map((server, idx) => (
                 <tr
                   key={server.id}
-                  className={`row-hover transition-colors duration-150 ${idx < servers.length - 1 ? "row-divider" : ""}`}
+                  className={`row-hover transition-colors duration-150 ${idx < (servers.length - 1) ? "row-divider" : ""}`}
                 >
                   <td className="px-8 py-5">
                     <div className="flex items-center gap-3">
@@ -115,7 +113,7 @@ export default function App() {
                   </td>
                   <td className="px-8 py-5">
                     <span className="timestamp-text text-sm font-mono">
-                      {formatTimestamp(server.timestamp)}
+                      {formatTimestamp(server.updatedAt)}
                     </span>
                   </td>
                 </tr>
