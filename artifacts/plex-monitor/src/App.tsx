@@ -19,7 +19,9 @@ function formatTimestamp(iso: string | null | undefined): string {
 
 export default function App() {
   const queryClient = useQueryClient();
-  const { data: servers, isLoading } = useListServers();
+  const { data: servers, isLoading } = useListServers({
+    query: { refetchInterval: 30_000 },
+  });
   const updateStatus = useUpdateServerStatus({
     mutation: {
       onSuccess: () => {
