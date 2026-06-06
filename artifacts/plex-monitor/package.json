@@ -73,5 +73,9 @@
     "vite": "catalog:",
     "wouter": "^3.3.5",
     "zod": "catalog:"
+  },
+  "dependencies": {
+    "@fontsource/nunito": "^5.2.7",
+    "@fontsource/pacifico": "^5.2.7"
   }
 }

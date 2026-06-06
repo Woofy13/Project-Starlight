@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "Plex Monitoring Service"
+title = "Project Starlight"
 version = "1.0.0"
 id = "artifacts/plex-monitor"
 router = "path"

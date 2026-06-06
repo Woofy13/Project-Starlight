@@ -5,10 +5,13 @@ import {
   getListServersQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import Login from "./Login";
 import bgImage from "/bg.png";
 import anyaStare from "/anya-nobg.png";
 import anyaExcited from "/anya2-nobg.png";
 import yorImage from "/yor-nobg.png";
+import sticker1 from "/sticker1-nobg.png";
+import sticker2 from "/sticker2-nobg.png";
 
 const SERVER_ORDER = ["mio", "bo", "new-tunes", "aaryn"];
 const SERVER_EMOJI: Record<string, string> = {
@@ -27,24 +30,30 @@ function formatTime(iso: string | null | undefined): string {
   });
 }
 
-// Sakura petal component
-function SakuraPetal({ style }: { style: React.CSSProperties }) {
-  return <div className="petal" style={style} />;
+function getCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
 }
 
-// Sparkle burst component
 function Sparkle({ active }: { active: boolean }) {
   return (
-    <span className={`sparkle-wrap ${active ? "sparkle-pop" : ""}`}>
-      ✨
-    </span>
+    <span className={`sparkle-wrap ${active ? "sparkle-pop" : ""}`}>✨</span>
   );
 }
 
+const PETALS = Array.from({ length: 18 }, (_, i) => ({
+  left: `${(i * 5.7 + 3) % 100}%`,
+  animationDelay: `${(i * 1.3) % 8}s`,
+  animationDuration: `${6 + (i % 5)}s`,
+  fontSize: `${10 + (i % 8)}px`,
+  opacity: 0.55 + (i % 3) * 0.12,
+}));
+
 export default function App() {
+  const [authed, setAuthed] = useState(() => getCookie("starlight_session") === "ok");
   const queryClient = useQueryClient();
   const { data: rawServers, isLoading, dataUpdatedAt } = useListServers({
-    query: { refetchInterval: 30_000 },
+    query: { refetchInterval: 30_000, enabled: authed },
   });
   const updateStatus = useUpdateServerStatus({
     mutation: {
@@ -57,14 +66,12 @@ export default function App() {
   const [lastToggled, setLastToggled] = useState<string | null>(null);
   const [anyaExcitedVisible, setAnyaExcitedVisible] = useState(false);
 
-  // Sort servers by defined order
   const servers = rawServers
     ? [...rawServers].sort(
         (a, b) => SERVER_ORDER.indexOf(a.id) - SERVER_ORDER.indexOf(b.id)
       )
     : [];
 
-  // Anya reacts when any server is ON
   const anyServerOn = servers.some((s) => s.status === "on");
   useEffect(() => {
     setAnyaExcitedVisible(anyServerOn);
@@ -77,21 +84,17 @@ export default function App() {
     updateStatus.mutate({ id, data: { status: next } });
   }
 
-  // Generate sakura petals (static list)
-  const petals = Array.from({ length: 18 }, (_, i) => ({
-    left: `${(i * 5.7 + 3) % 100}%`,
-    animationDelay: `${(i * 1.3) % 8}s`,
-    animationDuration: `${6 + (i % 5)}s`,
-    fontSize: `${10 + (i % 8)}px`,
-    opacity: 0.55 + (i % 3) * 0.12,
-  }));
+  if (!authed) {
+    return <Login onSuccess={() => setAuthed(true)} />;
+  }
 
   return (
     <div className="page-root">
       {/* Sakura petals */}
-      {petals.map((p, i) => (
-        <SakuraPetal
+      {PETALS.map((p, i) => (
+        <div
           key={i}
+          className="petal"
           style={{
             left: p.left,
             animationDelay: p.animationDelay,
@@ -106,6 +109,12 @@ export default function App() {
       <div className="bg-image" style={{ backgroundImage: `url(${bgImage})` }} />
       <div className="bg-overlay" />
 
+      {/* Stickers scattered around */}
+      <img src={sticker1} alt="" className="sticker sticker-tr" aria-hidden />
+      <img src={sticker2} alt="" className="sticker sticker-bl" aria-hidden />
+      <img src={sticker1} alt="" className="sticker sticker-tm" aria-hidden />
+      <img src={sticker2} alt="" className="sticker sticker-br2" aria-hidden />
+
       {/* Yor — left side */}
       <div className="yor-wrap">
         <img src={yorImage} alt="Yor" className="yor-img" />
@@ -113,12 +122,10 @@ export default function App() {
 
       {/* Main content */}
       <div className="content-wrap">
-        {/* Title only */}
         <div className="header">
-          <h1 className="page-title">✦ Plex Monitoring ✦</h1>
+          <h1 className="page-title">✦ Project Starlight ✦</h1>
         </div>
 
-        {/* Table card */}
         <div className="card">
           <table className="server-table">
             <thead>
@@ -139,7 +146,6 @@ export default function App() {
                   key={server.id}
                   className={`server-row ${idx < servers.length - 1 ? "row-sep" : ""}`}
                 >
-                  {/* Name + dot + emoji */}
                   <td className="td">
                     <div className="server-name-wrap">
                       <span className={`dot ${server.status === "on" ? "dot-on" : "dot-off"}`} />
@@ -147,8 +153,6 @@ export default function App() {
                       <span className="server-name">{server.name}</span>
                     </div>
                   </td>
-
-                  {/* Toggle */}
                   <td className="td" style={{ textAlign: "center" }}>
                     <div className="toggle-wrap">
                       <button
@@ -166,8 +170,6 @@ export default function App() {
                       <Sparkle active={lastToggled === server.id} />
                     </div>
                   </td>
-
-                  {/* Timestamp */}
                   <td className="td">
                     <span className="timestamp">{formatTime(server.updatedAt)}</span>
                   </td>
@@ -177,7 +179,6 @@ export default function App() {
           </table>
         </div>
 
-        {/* Sync footer */}
         <p className="sync-text">
           {dataUpdatedAt
             ? <>✦ Synced: <span className="mono">{new Date(dataUpdatedAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", hour12: true })}</span> · auto-refreshes every 30s</>
@@ -185,20 +186,12 @@ export default function App() {
         </p>
       </div>
 
-      {/* Anya bottom center — fades between stare and excited */}
+      {/* Anya bottom center */}
       <div className="anya-wrap">
-        <img
-          src={anyaStare}
-          alt="Anya stare"
-          className="anya-img"
-          style={{ opacity: anyaExcitedVisible ? 0 : 1 }}
-        />
-        <img
-          src={anyaExcited}
-          alt="Anya excited"
-          className="anya-img anya-overlay"
-          style={{ opacity: anyaExcitedVisible ? 1 : 0 }}
-        />
+        <img src={anyaStare} alt="Anya stare" className="anya-img"
+          style={{ opacity: anyaExcitedVisible ? 0 : 1 }} />
+        <img src={anyaExcited} alt="Anya excited" className="anya-img anya-overlay"
+          style={{ opacity: anyaExcitedVisible ? 1 : 0 }} />
       </div>
     </div>
   );
