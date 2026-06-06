@@ -110,10 +110,16 @@ export default function App() {
       <div className="bg-overlay" />
 
       {/* Stickers scattered around */}
-      <img src={sticker1} alt="" className="sticker sticker-tr" aria-hidden />
-      <img src={sticker2} alt="" className="sticker sticker-bl" aria-hidden />
-      <img src={sticker1} alt="" className="sticker sticker-tm" aria-hidden />
-      <img src={sticker2} alt="" className="sticker sticker-br2" aria-hidden />
+      {/* sticker1 sheet — 4 cells (TL, TR, BL, BR) */}
+      <div className="sticker s1a" style={{ backgroundImage: `url(${sticker1})` }} aria-hidden />
+      <div className="sticker s1b" style={{ backgroundImage: `url(${sticker1})` }} aria-hidden />
+      <div className="sticker s1c" style={{ backgroundImage: `url(${sticker1})` }} aria-hidden />
+      <div className="sticker s1d" style={{ backgroundImage: `url(${sticker1})` }} aria-hidden />
+      {/* sticker2 sheet — 4 cells (TL, TR, BL, BR) */}
+      <div className="sticker s2a" style={{ backgroundImage: `url(${sticker2})` }} aria-hidden />
+      <div className="sticker s2b" style={{ backgroundImage: `url(${sticker2})` }} aria-hidden />
+      <div className="sticker s2c" style={{ backgroundImage: `url(${sticker2})` }} aria-hidden />
+      <div className="sticker s2d" style={{ backgroundImage: `url(${sticker2})` }} aria-hidden />
 
       {/* Yor — left side */}
       <div className="yor-wrap">

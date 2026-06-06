@@ -63,17 +63,28 @@
 }
 
 /* ── Stickers ────────────────────────────────────────────────────────── */
+/* Each div crops one cell from a 2×2 sheet via background-position.    */
 .sticker {
   position: fixed;
+  bottom: 6px;
   z-index: 3;
   pointer-events: none;
-  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.45));
+  width: 90px;
+  height: 90px;
+  background-size: 200% 200%;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 3px 10px rgba(0,0,0,0.45));
 }
-/* Spread along the bottom, keeping center clear for Anya */
-.sticker-tr  { bottom: 8px; left: 1%;   rotate: -7deg;  width: 130px; }
-.sticker-bl  { bottom: 8px; left: 20%;  rotate: 6deg;   width: 118px; }
-.sticker-tm  { bottom: 8px; right: 20%; rotate: -5deg;  width: 125px; }
-.sticker-br2 { bottom: 8px; right: 1%;  rotate: 9deg;   width: 120px; }
+/* sheet 1 cells */
+.s1a { background-position: 0%   0%;   left:  1%;  rotate: -8deg;  }
+.s1b { background-position: 100% 0%;   left: 11%;  rotate:  5deg;  }
+.s1c { background-position: 0%   100%; left: 21%;  rotate: -4deg;  }
+.s1d { background-position: 100% 100%; left: 31%;  rotate:  7deg;  }
+/* sheet 2 cells — mirror on the right, keeping center clear for Anya */
+.s2a { background-position: 0%   0%;   right: 31%; rotate: -6deg;  }
+.s2b { background-position: 100% 0%;   right: 21%; rotate:  4deg;  }
+.s2c { background-position: 0%   100%; right: 11%; rotate: -7deg;  }
+.s2d { background-position: 100% 100%; right:  1%; rotate:  9deg;  }
 
 /* ── Content ─────────────────────────────────────────────────────────── */
 .content-wrap {
