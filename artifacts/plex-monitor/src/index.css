@@ -101,14 +101,14 @@ body {
 /* ── Card ────────────────────────────────────────────────────────────── */
 .card {
   width: 100%;
-  background: rgba(200, 80, 110, 0.18);
-  border: 1.5px solid rgba(255, 158, 181, 0.4);
+  background: rgba(255, 190, 210, 0.18);
+  border: 1.5px solid rgba(255, 200, 220, 0.5);
   border-radius: 20px;
   overflow: hidden;
   box-shadow:
-    0 0 0 1px rgba(255, 158, 181, 0.1),
+    0 0 0 1px rgba(255, 210, 225, 0.12),
     0 8px 48px rgba(107, 15, 26, 0.6),
-    inset 0 1px 0 rgba(255, 200, 210, 0.15);
+    inset 0 1px 0 rgba(255, 220, 230, 0.2);
   backdrop-filter: blur(20px);
 }
 
@@ -125,9 +125,9 @@ body {
   font-weight: 900;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #ffd6e0;
-  background: rgba(200, 40, 80, 0.38);
-  border-bottom: 1.5px solid rgba(255, 158, 181, 0.3);
+  color: #ffe8f0;
+  background: rgba(240, 140, 170, 0.32);
+  border-bottom: 1.5px solid rgba(255, 200, 220, 0.35);
 }
 
 .td {
@@ -295,14 +295,15 @@ body {
 /* ── Yor (left side) ─────────────────────────────────────────────────── */
 .yor-wrap {
   position: fixed;
-  bottom: 0;
+  top: 50%;
   left: 0;
+  transform: translateY(-50%);
   z-index: 3;
   pointer-events: none;
 }
 .yor-img {
-  width: 220px;
-  max-width: 18vw;
+  width: 440px;
+  max-width: 36vw;
   display: block;
   filter: drop-shadow(4px 0 24px rgba(107, 15, 26, 0.5));
 }
