@@ -67,13 +67,13 @@
   position: fixed;
   z-index: 3;
   pointer-events: none;
-  width: 140px;
-  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.45));
 }
-.sticker-tr  { top: 2%;  right: 2%;   rotate: 8deg;   width: 150px; }
-.sticker-bl  { bottom: 200px; left: 200px; rotate: -6deg; width: 130px; }
-.sticker-tm  { top: 30%; right: 3%;  rotate: -10deg; width: 120px; opacity: 0.9; }
-.sticker-br2 { bottom: 200px; right: 3%;   rotate: 5deg;   width: 115px; opacity: 0.85; }
+/* Spread along the bottom, keeping center clear for Anya */
+.sticker-tr  { bottom: 8px; left: 1%;   rotate: -7deg;  width: 130px; }
+.sticker-bl  { bottom: 8px; left: 20%;  rotate: 6deg;   width: 118px; }
+.sticker-tm  { bottom: 8px; right: 20%; rotate: -5deg;  width: 125px; }
+.sticker-br2 { bottom: 8px; right: 1%;  rotate: 9deg;   width: 120px; }
 
 /* ── Content ─────────────────────────────────────────────────────────── */
 .content-wrap {
@@ -199,15 +199,14 @@
 /* ── Yor ─────────────────────────────────────────────────────────────── */
 .yor-wrap {
   position: fixed;
-  /* 3cm up ≈ 113px, 5cm right ≈ 189px from original left:0 center */
   top: 50%;
-  left: 189px;
-  transform: translateY(calc(-50% - 113px));
+  left: 0;
+  transform: translateY(-50%);
   z-index: 3;
   pointer-events: none;
 }
 .yor-img {
-  width: 440px; max-width: 36vw; display: block;
+  width: 370px; max-width: 28vw; display: block;
   filter: drop-shadow(4px 0 24px rgba(107,15,26,0.5));
 }
 
