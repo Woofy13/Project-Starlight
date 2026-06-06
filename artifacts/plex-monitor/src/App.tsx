@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   useListServers,
   useUpdateServerStatus,
@@ -5,7 +6,17 @@ import {
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import bgImage from "/bg.png";
-import anyaImage from "/anya-nobg.png";
+import anyaStare from "/anya-nobg.png";
+import anyaExcited from "/anya2-nobg.png";
+import yorImage from "/yor-nobg.png";
+
+const SERVER_ORDER = ["mio", "bo", "new-tunes", "aaryn"];
+const SERVER_EMOJI: Record<string, string> = {
+  mio: "🌸",
+  bo: "🐾",
+  "new-tunes": "🎵",
+  aaryn: "⭐",
+};
 
 function formatTime(iso: string | null | undefined): string {
   if (!iso) return "—";
@@ -16,9 +27,23 @@ function formatTime(iso: string | null | undefined): string {
   });
 }
 
+// Sakura petal component
+function SakuraPetal({ style }: { style: React.CSSProperties }) {
+  return <div className="petal" style={style} />;
+}
+
+// Sparkle burst component
+function Sparkle({ active }: { active: boolean }) {
+  return (
+    <span className={`sparkle-wrap ${active ? "sparkle-pop" : ""}`}>
+      ✨
+    </span>
+  );
+}
+
 export default function App() {
   const queryClient = useQueryClient();
-  const { data: servers, isLoading, dataUpdatedAt } = useListServers({
+  const { data: rawServers, isLoading, dataUpdatedAt } = useListServers({
     query: { refetchInterval: 30_000 },
   });
   const updateStatus = useUpdateServerStatus({
@@ -29,27 +54,68 @@ export default function App() {
     },
   });
 
+  const [lastToggled, setLastToggled] = useState<string | null>(null);
+  const [anyaExcitedVisible, setAnyaExcitedVisible] = useState(false);
+
+  // Sort servers by defined order
+  const servers = rawServers
+    ? [...rawServers].sort(
+        (a, b) => SERVER_ORDER.indexOf(a.id) - SERVER_ORDER.indexOf(b.id)
+      )
+    : [];
+
+  // Anya reacts when any server is ON
+  const anyServerOn = servers.some((s) => s.status === "on");
+  useEffect(() => {
+    setAnyaExcitedVisible(anyServerOn);
+  }, [anyServerOn]);
+
   function handleToggle(id: string, current: string) {
     const next = current === "on" ? "off" : "on";
+    setLastToggled(id);
+    setTimeout(() => setLastToggled(null), 600);
     updateStatus.mutate({ id, data: { status: next } });
   }
 
+  // Generate sakura petals (static list)
+  const petals = Array.from({ length: 18 }, (_, i) => ({
+    left: `${(i * 5.7 + 3) % 100}%`,
+    animationDelay: `${(i * 1.3) % 8}s`,
+    animationDuration: `${6 + (i % 5)}s`,
+    fontSize: `${10 + (i % 8)}px`,
+    opacity: 0.55 + (i % 3) * 0.12,
+  }));
+
   return (
     <div className="page-root">
-      {/* Background image with overlay */}
-      <div
-        className="bg-image"
-        style={{ backgroundImage: `url(${bgImage})` }}
-      />
+      {/* Sakura petals */}
+      {petals.map((p, i) => (
+        <SakuraPetal
+          key={i}
+          style={{
+            left: p.left,
+            animationDelay: p.animationDelay,
+            animationDuration: p.animationDuration,
+            fontSize: p.fontSize,
+            opacity: p.opacity,
+          }}
+        />
+      ))}
+
+      {/* Background */}
+      <div className="bg-image" style={{ backgroundImage: `url(${bgImage})` }} />
       <div className="bg-overlay" />
 
-      {/* Content */}
+      {/* Yor — left side */}
+      <div className="yor-wrap">
+        <img src={yorImage} alt="Yor" className="yor-img" />
+      </div>
+
+      {/* Main content */}
       <div className="content-wrap">
-        {/* Header */}
+        {/* Title only */}
         <div className="header">
-          <div className="header-badge">✦ MONITORING</div>
-          <h1 className="page-title">Plex Monitoring Service</h1>
-          <p className="page-subtitle">Server status control panel</p>
+          <h1 className="page-title">✦ Plex Monitoring ✦</h1>
         </div>
 
         {/* Table card */}
@@ -57,42 +123,48 @@ export default function App() {
           <table className="server-table">
             <thead>
               <tr>
-                <th className="th" style={{ width: "40%" }}>Server</th>
-                <th className="th" style={{ width: "20%", textAlign: "center" }}>Status</th>
+                <th className="th" style={{ width: "42%" }}>Server</th>
+                <th className="th" style={{ width: "22%", textAlign: "center" }}>Status</th>
                 <th className="th">Last Changed</th>
               </tr>
             </thead>
             <tbody>
               {isLoading && (
                 <tr>
-                  <td colSpan={3} className="loading-cell">Loading servers…</td>
+                  <td colSpan={3} className="loading-cell">Loading servers… 🌸</td>
                 </tr>
               )}
-              {servers?.map((server, idx) => (
+              {servers.map((server, idx) => (
                 <tr
                   key={server.id}
-                  className={`server-row ${idx < (servers.length - 1) ? "row-sep" : ""}`}
+                  className={`server-row ${idx < servers.length - 1 ? "row-sep" : ""}`}
                 >
-                  {/* Server name + dot */}
+                  {/* Name + dot + emoji */}
                   <td className="td">
                     <div className="server-name-wrap">
                       <span className={`dot ${server.status === "on" ? "dot-on" : "dot-off"}`} />
+                      <span className="server-emoji">{SERVER_EMOJI[server.id] ?? "🌟"}</span>
                       <span className="server-name">{server.name}</span>
                     </div>
                   </td>
 
                   {/* Toggle */}
                   <td className="td" style={{ textAlign: "center" }}>
-                    <button
-                      onClick={() => handleToggle(server.id, server.status)}
-                      className={`toggle ${server.status === "on" ? "toggle-on" : "toggle-off"}`}
-                      aria-label={`Toggle ${server.name}`}
-                    >
-                      <span className="toggle-thumb" />
-                      <span className="toggle-label">
-                        {server.status === "on" ? "ON" : "OFF"}
-                      </span>
-                    </button>
+                    <div className="toggle-wrap">
+                      <button
+                        onClick={() => handleToggle(server.id, server.status)}
+                        className={`toggle ${server.status === "on" ? "toggle-on" : "toggle-off"}`}
+                        aria-label={`Toggle ${server.name}`}
+                      >
+                        <span className="toggle-track">
+                          <span className="toggle-thumb" />
+                        </span>
+                        <span className="toggle-label">
+                          {server.status === "on" ? "ON" : "OFF"}
+                        </span>
+                      </button>
+                      <Sparkle active={lastToggled === server.id} />
+                    </div>
                   </td>
 
                   {/* Timestamp */}
@@ -108,14 +180,25 @@ export default function App() {
         {/* Sync footer */}
         <p className="sync-text">
           {dataUpdatedAt
-            ? <>✦ Last synced: <span className="mono">{new Date(dataUpdatedAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", hour12: true })}</span> · refreshes every 30s</>
-            : "Connecting…"}
+            ? <>✦ Synced: <span className="mono">{new Date(dataUpdatedAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", hour12: true })}</span> · auto-refreshes every 30s</>
+            : "Connecting… 🌸"}
         </p>
       </div>
 
-      {/* Anya at the bottom */}
+      {/* Anya bottom center — fades between stare and excited */}
       <div className="anya-wrap">
-        <img src={anyaImage} alt="Anya" className="anya-img" />
+        <img
+          src={anyaStare}
+          alt="Anya stare"
+          className="anya-img"
+          style={{ opacity: anyaExcitedVisible ? 0 : 1 }}
+        />
+        <img
+          src={anyaExcited}
+          alt="Anya excited"
+          className="anya-img anya-overlay"
+          style={{ opacity: anyaExcitedVisible ? 1 : 0 }}
+        />
       </div>
     </div>
   );
