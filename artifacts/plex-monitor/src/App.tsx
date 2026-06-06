@@ -19,7 +19,7 @@ function formatTimestamp(iso: string | null | undefined): string {
 
 export default function App() {
   const queryClient = useQueryClient();
-  const { data: servers, isLoading } = useListServers({
+  const { data: servers, isLoading, dataUpdatedAt } = useListServers({
     query: { refetchInterval: 30_000 },
   });
   const updateStatus = useUpdateServerStatus({
@@ -125,7 +125,9 @@ export default function App() {
         </div>
 
         <p className="mt-6 text-center footer-text text-xs">
-          Toggle a server's selection to update its timestamp
+          {dataUpdatedAt
+            ? <>Last synced: <span className="font-mono">{new Date(dataUpdatedAt).toLocaleTimeString()}</span> · refreshes every 30s</>
+            : "Connecting…"}
         </p>
       </div>
     </div>
