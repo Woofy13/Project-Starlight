@@ -12,6 +12,8 @@ interface Server {
 const initialServers: Server[] = [
   { id: "mio", name: "Mio", status: "off", timestamp: null },
   { id: "bo", name: "Bo", status: "off", timestamp: null },
+  { id: "aaryn", name: "Aaryn", status: "off", timestamp: null },
+  { id: "new-tunes", name: "New Tunes", status: "off", timestamp: null },
 ];
 
 function formatTimestamp(date: Date | null): string {
