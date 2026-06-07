@@ -17,7 +17,7 @@ export default function Login({ onSuccess }: LoginProps) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (password === "Test") {
+    if (password === "Test123") {
       setCookie("starlight_session", "ok", 7);
       onSuccess();
     } else {

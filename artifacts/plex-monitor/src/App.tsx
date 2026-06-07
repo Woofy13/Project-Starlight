@@ -58,7 +58,7 @@ const PETALS = Array.from({ length: 18 }, (_, i) => ({
 }));
 
 export default function App() {
-  const [authed, setAuthed] = useState(true); // password gate disabled
+  const [authed, setAuthed] = useState(() => getCookie("starlight_session") === "ok");
   const [theme, setTheme] = useState<"dark" | "light">(() =>
     (localStorage.getItem("starlight_theme") as "dark" | "light") ?? "dark"
   );
