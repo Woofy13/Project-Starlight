@@ -196,7 +196,7 @@
   pointer-events: none;
 }
 .yor-img {
-  width: clamp(180px, 22vw, 420px);
+  width: clamp(207px, 25vw, 483px);
   display: block;
   filter: drop-shadow(4px 0 24px rgba(107,15,26,0.5));
 }
@@ -286,8 +286,79 @@
   .toggle-label { font-size: clamp(0.72rem, 0.7vw, 0.9rem); }
   .anya-img { width: clamp(150px, 10vw, 220px); }
   .anya-overlay { width: clamp(225px, 15vw, 330px); }
-  .yor-img { width: clamp(320px, 22vw, 560px); }
+  .yor-img { width: clamp(368px, 25vw, 644px); }
 }
+
+/* ── Theme toggle button ─────────────────────────────────────────────── */
+.theme-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10;
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 158, 181, 0.45);
+  background: rgba(255, 190, 210, 0.18);
+  backdrop-filter: blur(12px);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s, transform 0.15s;
+  box-shadow: 0 2px 12px rgba(107,15,26,0.3);
+}
+.theme-toggle:hover { background: rgba(255, 158, 181, 0.32); transform: scale(1.1); }
+
+/* ── Light mode overrides ────────────────────────────────────────────── */
+html[data-theme="light"] body { background: #fce4ec; }
+
+html[data-theme="light"] .bg-image { opacity: 0.35; filter: brightness(1.1) saturate(0.8); }
+
+html[data-theme="light"] .bg-overlay {
+  background: linear-gradient(
+    160deg,
+    rgba(255, 215, 230, 0.72) 0%,
+    rgba(255, 240, 248, 0.76) 50%,
+    rgba(220, 248, 234, 0.68) 100%
+  );
+}
+
+html[data-theme="light"] .card {
+  background: rgba(255, 255, 255, 0.76);
+  border-color: rgba(200, 100, 140, 0.3);
+  box-shadow:
+    0 0 0 1px rgba(255, 150, 180, 0.12),
+    0 8px 48px rgba(180, 50, 90, 0.15),
+    inset 0 1px 0 rgba(255, 220, 230, 0.6);
+}
+
+html[data-theme="light"] .page-title {
+  color: #b50040;
+  text-shadow: 0 0 20px rgba(200, 60, 110, 0.35), 0 2px 6px rgba(0,0,0,0.1);
+}
+
+html[data-theme="light"] .th {
+  background: rgba(210, 70, 110, 0.14);
+  color: #7a1030;
+  border-bottom-color: rgba(200, 100, 140, 0.28);
+}
+
+html[data-theme="light"] .server-name { color: #5a0a20; }
+html[data-theme="light"] .timestamp   { color: #4a6a5a; }
+html[data-theme="light"] .sync-text   { color: #9a4060; }
+html[data-theme="light"] .mono        { color: #b50040; }
+html[data-theme="light"] .loading-cell { color: #b50040; }
+html[data-theme="light"] .server-row:hover { background: rgba(210, 70, 110, 0.07); }
+html[data-theme="light"] .row-sep { border-bottom-color: rgba(200, 100, 140, 0.18); }
+html[data-theme="light"] .toggle-off .toggle-track { background: rgba(140, 180, 155, 0.55); }
+html[data-theme="light"] .toggle-off .toggle-label { color: #4a6a5a; }
+html[data-theme="light"] .toggle-on  .toggle-label { color: #b50040; }
+html[data-theme="light"] .petal { color: #d06080; }
+html[data-theme="light"] .theme-toggle {
+  border-color: rgba(180, 80, 120, 0.4);
+  background: rgba(255, 220, 235, 0.55);
+  box-shadow: 0 2px 12px rgba(180, 50, 90, 0.2);
+}
+html[data-theme="light"] .theme-toggle:hover { background: rgba(255, 190, 215, 0.75); }
 
 /* Shake animation for wrong password */
 @keyframes shake {

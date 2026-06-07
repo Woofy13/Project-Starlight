@@ -49,6 +49,15 @@ const PETALS = Array.from({ length: 18 }, (_, i) => ({
 
 export default function App() {
   const [authed, setAuthed] = useState(() => getCookie("starlight_session") === "ok");
+  const [theme, setTheme] = useState<"dark" | "light">(() =>
+    (localStorage.getItem("starlight_theme") as "dark" | "light") ?? "dark"
+  );
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("starlight_theme", theme);
+  }, [theme]);
+
   const queryClient = useQueryClient();
   const { data: rawServers, isLoading, dataUpdatedAt } = useListServers({
     query: { refetchInterval: 30_000, enabled: authed },
@@ -102,6 +111,15 @@ export default function App() {
           }}
         />
       ))}
+
+      {/* Theme toggle */}
+      <button
+        className="theme-toggle"
+        onClick={() => setTheme(t => t === "dark" ? "light" : "dark")}
+        aria-label="Toggle theme"
+      >
+        {theme === "dark" ? "☀️" : "🌙"}
+      </button>
 
       {/* Background */}
       <div className="bg-image" style={{ backgroundImage: `url(${bgImage})` }} />
