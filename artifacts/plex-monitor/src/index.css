@@ -133,6 +133,12 @@
 .card-on::before  { background: linear-gradient(180deg, #ff4d6d, #c0143c); }
 .card-off::before { background: linear-gradient(180deg, #8fab9a, #5a706a); }
 
+.card-on { animation: card-pulse 2.8s ease-in-out infinite; }
+@keyframes card-pulse {
+  0%, 100% { box-shadow: 0 4px 24px rgba(107,15,26,0.35), inset 0 1px 0 rgba(255,220,230,0.15), 0 0 0 0 rgba(255, 77, 109, 0); }
+  50%       { box-shadow: 0 4px 24px rgba(107,15,26,0.35), inset 0 1px 0 rgba(255,220,230,0.15), 0 0 18px 4px rgba(255, 77, 109, 0.28); }
+}
+
 .server-card:hover {
   background: rgba(255, 190, 210, 0.24);
   transform: translateY(-2px);
