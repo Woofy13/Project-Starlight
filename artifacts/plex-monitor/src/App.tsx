@@ -10,8 +10,6 @@ import bgImage from "/bg.png";
 import anyaStare from "/anya-nobg.png";
 import anyaExcited from "/anya2-nobg.png";
 import yorImage from "/yor-nobg.png";
-import sticker1 from "/sticker1-nobg.png";
-import sticker2 from "/sticker2-nobg.png";
 
 const SERVER_ORDER = ["mio", "bo", "new-tunes", "aaryn"];
 const SERVER_EMOJI: Record<string, string> = {
@@ -109,17 +107,6 @@ export default function App() {
       <div className="bg-image" style={{ backgroundImage: `url(${bgImage})` }} />
       <div className="bg-overlay" />
 
-      {/* Stickers scattered around */}
-      {/* sticker1 sheet — 4 cells (TL, TR, BL, BR) */}
-      <div className="sticker s1a" style={{ backgroundImage: `url(${sticker1})` }} aria-hidden />
-      <div className="sticker s1b" style={{ backgroundImage: `url(${sticker1})` }} aria-hidden />
-      <div className="sticker s1c" style={{ backgroundImage: `url(${sticker1})` }} aria-hidden />
-      <div className="sticker s1d" style={{ backgroundImage: `url(${sticker1})` }} aria-hidden />
-      {/* sticker2 sheet — 4 cells (TL, TR, BL, BR) */}
-      <div className="sticker s2a" style={{ backgroundImage: `url(${sticker2})` }} aria-hidden />
-      <div className="sticker s2b" style={{ backgroundImage: `url(${sticker2})` }} aria-hidden />
-      <div className="sticker s2c" style={{ backgroundImage: `url(${sticker2})` }} aria-hidden />
-      <div className="sticker s2d" style={{ backgroundImage: `url(${sticker2})` }} aria-hidden />
 
       {/* Yor — left side */}
       <div className="yor-wrap">
@@ -137,7 +124,7 @@ export default function App() {
             <thead>
               <tr>
                 <th className="th" style={{ width: "42%" }}>Server</th>
-                <th className="th" style={{ width: "22%", textAlign: "center" }}>Status</th>
+                <th className="th th-center" style={{ width: "22%" }}>Status</th>
                 <th className="th">Last Changed</th>
               </tr>
             </thead>

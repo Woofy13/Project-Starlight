@@ -18,8 +18,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   overflow: hidden;
-  padding: 3rem 1rem 220px;
+  padding: clamp(1.5rem, 4vh, 4rem) clamp(1rem, 4vw, 3rem) clamp(120px, 18vh, 220px);
 }
 
 /* ── Background ─────────────────────────────────────────────────────── */
@@ -62,47 +63,24 @@
   100% { transform: translateY(110vh) rotate(540deg); opacity: 0; }
 }
 
-/* ── Stickers ────────────────────────────────────────────────────────── */
-/* Each div crops one cell from a 2×2 sheet via background-position.    */
-.sticker {
-  position: fixed;
-  bottom: 6px;
-  z-index: 3;
-  pointer-events: none;
-  width: 90px;
-  height: 90px;
-  background-size: 200% 200%;
-  background-repeat: no-repeat;
-  filter: drop-shadow(0 3px 10px rgba(0,0,0,0.45));
-}
-/* sheet 1 cells */
-.s1a { background-position: 0%   0%;   left:  1%;  rotate: -8deg;  }
-.s1b { background-position: 100% 0%;   left: 11%;  rotate:  5deg;  }
-.s1c { background-position: 0%   100%; left: 21%;  rotate: -4deg;  }
-.s1d { background-position: 100% 100%; left: 31%;  rotate:  7deg;  }
-/* sheet 2 cells — mirror on the right, keeping center clear for Anya */
-.s2a { background-position: 0%   0%;   right: 31%; rotate: -6deg;  }
-.s2b { background-position: 100% 0%;   right: 21%; rotate:  4deg;  }
-.s2c { background-position: 0%   100%; right: 11%; rotate: -7deg;  }
-.s2d { background-position: 100% 100%; right:  1%; rotate:  9deg;  }
 
 /* ── Content ─────────────────────────────────────────────────────────── */
 .content-wrap {
   position: relative;
   z-index: 4;
   width: 100%;
-  max-width: 640px;
+  max-width: clamp(480px, 52vw, 760px);
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-left: 80px;
+  margin: 0 auto;
 }
 
 /* ── Header ──────────────────────────────────────────────────────────── */
 .header { text-align: center; margin-bottom: 1.6rem; }
 .page-title {
   font-family: 'Pacifico', cursive;
-  font-size: 2.2rem;
+  font-size: clamp(1.6rem, 3.2vw, 3rem);
   letter-spacing: 0.01em;
   color: #ff9eb5;
   text-shadow:
@@ -127,9 +105,9 @@
 /* ── Table ───────────────────────────────────────────────────────────── */
 .server-table { width: 100%; border-collapse: collapse; }
 .th {
-  padding: 0.9rem 1.4rem;
+  padding: clamp(0.6rem, 1.2vh, 1.1rem) clamp(0.8rem, 1.8vw, 1.8rem);
   text-align: left;
-  font-size: 0.68rem;
+  font-size: clamp(0.6rem, 0.9vw, 0.78rem);
   font-weight: 900;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -138,7 +116,8 @@
   border-bottom: 1.5px solid rgba(255, 200, 220, 0.35);
   font-family: 'Nunito', sans-serif;
 }
-.td { padding: 0.9rem 1.4rem; }
+.th-center { text-align: center; }
+.td { padding: clamp(0.6rem, 1.2vh, 1.1rem) clamp(0.8rem, 1.8vw, 1.8rem); }
 .server-row { transition: background 0.18s; }
 .server-row:hover { background: rgba(255, 158, 181, 0.12); }
 .row-sep { border-bottom: 1px solid rgba(255, 158, 181, 0.18); }
@@ -217,7 +196,8 @@
   pointer-events: none;
 }
 .yor-img {
-  width: 370px; max-width: 28vw; display: block;
+  width: clamp(180px, 22vw, 420px);
+  display: block;
   filter: drop-shadow(4px 0 24px rgba(107,15,26,0.5));
 }
 
@@ -227,16 +207,15 @@
   transform: translateX(-50%); z-index: 5; pointer-events: none;
 }
 .anya-img {
-  width: 140px; max-width: 18vw; display: block;
+  width: clamp(90px, 11vw, 160px); display: block;
   filter: brightness(0.7) drop-shadow(0 -4px 16px rgba(255,158,181,0.3));
   transition: opacity 0.3s ease;
 }
 .anya-overlay {
   position: absolute; bottom: 0; left: 0;
-  /* excited Anya is 1.5x bigger = 210px, anchored at bottom */
-  width: 210px;
+  width: clamp(135px, 16.5vw, 240px);
   filter: brightness(1) drop-shadow(0 -4px 20px rgba(255,158,181,0.6));
-  transform: translateX(calc(50% - 105px + 70px * 0)); /* keep centred relative to wrap */
+  transform: translateX(calc(50% - 105px + 70px * 0));
 }
 
 /* ── Login page ──────────────────────────────────────────────────────── */
@@ -283,6 +262,32 @@
 }
 .login-btn:hover  { opacity: 0.9; transform: translateY(-1px); }
 .login-btn:active { transform: translateY(0); }
+
+/* ── Responsive ──────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .yor-wrap { display: none; }
+  .content-wrap { max-width: 100%; }
+  .page-title { font-size: clamp(1.4rem, 6vw, 2rem); }
+  .th { font-size: 0.62rem; padding: 0.6rem 0.9rem; }
+  .td { padding: 0.65rem 0.9rem; }
+  .server-name { font-size: 0.85rem; }
+  .anya-img { width: clamp(70px, 16vw, 100px); }
+  .anya-overlay { width: clamp(105px, 24vw, 150px); }
+}
+
+@media (min-width: 2000px) {
+  .content-wrap { max-width: clamp(760px, 40vw, 1100px); }
+  .page-title { font-size: clamp(2.8rem, 3.5vw, 4.5rem); }
+  .th { font-size: clamp(0.72rem, 0.8vw, 1rem); padding: clamp(1rem, 1.4vh, 1.5rem) clamp(1.4rem, 2vw, 2.4rem); }
+  .td { padding: clamp(1rem, 1.4vh, 1.5rem) clamp(1.4rem, 2vw, 2.4rem); }
+  .server-name { font-size: clamp(1rem, 1.2vw, 1.4rem); }
+  .timestamp { font-size: clamp(0.85rem, 0.9vw, 1.1rem); }
+  .toggle-track { width: clamp(52px, 4vw, 68px); height: clamp(28px, 2.2vw, 38px); }
+  .toggle-label { font-size: clamp(0.72rem, 0.7vw, 0.9rem); }
+  .anya-img { width: clamp(150px, 10vw, 220px); }
+  .anya-overlay { width: clamp(225px, 15vw, 330px); }
+  .yor-img { width: clamp(320px, 22vw, 560px); }
+}
 
 /* Shake animation for wrong password */
 @keyframes shake {
