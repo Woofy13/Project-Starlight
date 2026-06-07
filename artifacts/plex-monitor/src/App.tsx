@@ -28,6 +28,16 @@ function formatTime(iso: string | null | undefined): string {
   });
 }
 
+function formatRelative(iso: string | null | undefined, now: number): string {
+  if (!iso) return "";
+  const diff = now - new Date(iso).getTime();
+  if (diff < 60_000) return "just now";
+  const h = Math.floor(diff / 3_600_000);
+  const m = Math.floor((diff % 3_600_000) / 60_000);
+  if (h > 0) return `${h}h ${m}m ago`;
+  return `${m}m ago`;
+}
+
 function getCookie(name: string): string | null {
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
   return match ? decodeURIComponent(match[1]) : null;
@@ -52,11 +62,17 @@ export default function App() {
   const [theme, setTheme] = useState<"dark" | "light">(() =>
     (localStorage.getItem("starlight_theme") as "dark" | "light") ?? "dark"
   );
+  const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("starlight_theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const queryClient = useQueryClient();
   const { data: rawServers, isLoading, dataUpdatedAt } = useListServers({
@@ -125,7 +141,6 @@ export default function App() {
       <div className="bg-image" style={{ backgroundImage: `url(${bgImage})` }} />
       <div className="bg-overlay" />
 
-
       {/* Yor — left side */}
       <div className="yor-wrap">
         <img src={yorImage} alt="Yor" className="yor-img" />
@@ -137,57 +152,41 @@ export default function App() {
           <h1 className="page-title">✦ Project Starlight ✦</h1>
         </div>
 
-        <div className="card">
-          <table className="server-table">
-            <thead>
-              <tr>
-                <th className="th" style={{ width: "42%" }}>Server</th>
-                <th className="th th-center" style={{ width: "22%" }}>Status</th>
-                <th className="th">Last Changed</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading && (
-                <tr>
-                  <td colSpan={3} className="loading-cell">Loading servers… 🌸</td>
-                </tr>
-              )}
-              {servers.map((server, idx) => (
-                <tr
-                  key={server.id}
-                  className={`server-row ${idx < servers.length - 1 ? "row-sep" : ""}`}
-                >
-                  <td className="td">
-                    <div className="server-name-wrap">
-                      <span className={`dot ${server.status === "on" ? "dot-on" : "dot-off"}`} />
-                      <span className="server-emoji">{SERVER_EMOJI[server.id] ?? "🌟"}</span>
-                      <span className="server-name">{server.name}</span>
-                    </div>
-                  </td>
-                  <td className="td" style={{ textAlign: "center" }}>
-                    <div className="toggle-wrap">
-                      <button
-                        onClick={() => handleToggle(server.id, server.status)}
-                        className={`toggle ${server.status === "on" ? "toggle-on" : "toggle-off"}`}
-                        aria-label={`Toggle ${server.name}`}
-                      >
-                        <span className="toggle-track">
-                          <span className="toggle-thumb" />
-                        </span>
-                        <span className="toggle-label">
-                          {server.status === "on" ? "ON" : "OFF"}
-                        </span>
-                      </button>
-                      <Sparkle active={lastToggled === server.id} />
-                    </div>
-                  </td>
-                  <td className="td">
-                    <span className="timestamp">{formatTime(server.updatedAt)}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* Card grid */}
+        <div className="server-grid">
+          {isLoading && (
+            <div className="grid-loading">Loading servers… 🌸</div>
+          )}
+          {servers.map((server) => {
+            const isOn = server.status === "on";
+            return (
+              <button
+                key={server.id}
+                className={`server-card ${isOn ? "card-on" : "card-off"}`}
+                onClick={() => handleToggle(server.id, server.status)}
+                aria-label={`Toggle ${server.name}`}
+              >
+                <div className="card-header">
+                  <div className="card-name-wrap">
+                    <span className="card-emoji">{SERVER_EMOJI[server.id] ?? "🌟"}</span>
+                    <span className="card-server-name">{server.name}</span>
+                  </div>
+                  <span className={`card-badge ${isOn ? "badge-on" : "badge-off"}`}>
+                    {isOn ? "In use" : "Free"}
+                  </span>
+                </div>
+                <div className={`card-status-text ${isOn ? "status-occupied" : "status-available"}`}>
+                  {isOn ? "Occupied" : "Available"}
+                </div>
+                <div className="card-since">
+                  {server.updatedAt
+                    ? `Since ${formatTime(server.updatedAt)} · ${formatRelative(server.updatedAt, now)}`
+                    : "No activity yet"}
+                </div>
+                <Sparkle active={lastToggled === server.id} />
+              </button>
+            );
+          })}
         </div>
 
         <p className="sync-text">
