@@ -130,6 +130,8 @@
   width: 4px;
   border-radius: 4px 0 0 4px;
 }
+.card-on  { border-color: rgba(255, 107, 138, 0.45); }
+.card-off { border-color: rgba(107, 207, 158, 0.32); }
 .card-on::before  { background: linear-gradient(180deg, #ff4d6d, #c0143c); }
 .card-off::before { background: linear-gradient(180deg, #8fab9a, #5a706a); }
 
@@ -162,7 +164,7 @@
 .card-emoji { font-size: 1rem; line-height: 1; flex-shrink: 0; }
 .card-server-name {
   font-family: 'Pacifico', cursive;
-  font-size: clamp(0.9rem, 1.4vw, 1.15rem);
+  font-size: clamp(1.05rem, 1.6vw, 1.3rem);
   color: #ffe4ec;
   line-height: 1.2;
   white-space: nowrap;
@@ -182,30 +184,41 @@
   text-transform: uppercase;
 }
 .badge-on  {
-  background: rgba(192,20,60,0.3);
-  color: #ff9eb5;
-  border: 1px solid rgba(255,77,109,0.4);
+  background: rgba(255, 107, 138, 0.18);
+  color: #ff6b8a;
+  border: 1px solid rgba(255, 107, 138, 0.5);
 }
 .badge-off {
-  background: rgba(90,112,106,0.28);
-  color: #8fab9a;
-  border: 1px solid rgba(143,171,154,0.38);
+  background: rgba(107, 207, 158, 0.15);
+  color: #6bcf9e;
+  border: 1px solid rgba(107, 207, 158, 0.45);
 }
 
 /* ── Status text ─────────────────────────────────────────────────────── */
 .card-status-text {
-  font-size: clamp(1.1rem, 1.8vw, 1.4rem);
+  font-size: clamp(0.95rem, 1.55vw, 1.25rem);
   font-weight: 800;
   line-height: 1.1;
   font-family: 'Nunito', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
 }
+.status-dot { font-size: 0.55em; line-height: 1; }
 .status-occupied { color: #ff6b8a; }
 .status-available { color: #6bcf9e; }
 
-/* ── Since line ──────────────────────────────────────────────────────── */
-.card-since {
-  font-size: clamp(0.62rem, 0.9vw, 0.72rem);
-  color: #a07080;
+/* ── Since lines ─────────────────────────────────────────────────────── */
+.card-since { display: flex; flex-direction: column; gap: 0.05rem; margin-top: 0.1rem; }
+.card-since-main {
+  font-size: clamp(0.65rem, 0.9vw, 0.75rem);
+  color: #c0a0b0;
+  font-weight: 600;
+  font-family: 'Nunito', sans-serif;
+}
+.card-since-ago {
+  font-size: clamp(0.58rem, 0.8vw, 0.67rem);
+  color: #80606a;
   font-weight: 600;
   font-family: 'Nunito', sans-serif;
 }

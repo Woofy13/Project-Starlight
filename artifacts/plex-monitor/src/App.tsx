@@ -176,12 +176,15 @@ export default function App() {
                   </span>
                 </div>
                 <div className={`card-status-text ${isOn ? "status-occupied" : "status-available"}`}>
-                  {isOn ? "Occupied" : "Available"}
+                  <span className="status-dot">●</span> {isOn ? "Occupied" : "Available"}
                 </div>
                 <div className="card-since">
-                  {server.updatedAt
-                    ? `Since ${formatTime(server.updatedAt)} · ${formatRelative(server.updatedAt, now)}`
-                    : "No activity yet"}
+                  {server.updatedAt ? (
+                    <>
+                      <div className="card-since-main">{isOn ? "In use" : "Free"} since {formatTime(server.updatedAt)}</div>
+                      <div className="card-since-ago">{formatRelative(server.updatedAt, now)}</div>
+                    </>
+                  ) : <div className="card-since-main">No activity yet</div>}
                 </div>
                 <Sparkle active={lastToggled === server.id} />
               </button>
