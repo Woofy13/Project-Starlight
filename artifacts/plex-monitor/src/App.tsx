@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   useListServers,
   useUpdateServerStatus,
@@ -10,6 +10,24 @@ import bgImage from "/bg.png";
 import anyaStare from "/anya-nobg.png";
 import anyaExcited from "/anya2-nobg.png";
 import yorImage from "/yor-nobg.png";
+import anya1 from "/anya1-nobg.png";
+import anya3 from "/anya3-nobg.png";
+import anya4 from "/anya4-nobg.png";
+import anya5 from "/anya5-nobg.png";
+import anyaStare2 from "/anyastare2-nobg.png";
+import anyaSticker from "/anyasticker-nobg.png";
+import anyaSticker2 from "/anyasticker2-nobg.png";
+import cuteAnyaStare from "/cuteanyastare-nobg.png";
+import yor2 from "/yor2-nobg.png";
+import yor3 from "/yor3-nobg.png";
+import cuteYor from "/cuteyor-nobg.png";
+
+const ANYA_IMAGES = [
+  anya1, anya3, anya4, anya5,
+  anyaStare2, anyaSticker, anyaSticker2, cuteAnyaStare,
+];
+const YOR_IMAGES = [yorImage, yor2, yor3, cuteYor];
+const ROTATION_INTERVAL = 30 * 60 * 1000; // 30 minutes
 
 const SERVER_ORDER = ["mio", "bo", "new-tunes", "aaryn"];
 const SERVER_EMOJI: Record<string, string> = {
@@ -49,12 +67,14 @@ function Sparkle({ active }: { active: boolean }) {
   );
 }
 
-const PETALS = Array.from({ length: 18 }, (_, i) => ({
-  left: `${(i * 5.7 + 3) % 100}%`,
-  animationDelay: `${(i * 1.3) % 8}s`,
-  animationDuration: `${6 + (i % 5)}s`,
-  fontSize: `${10 + (i % 8)}px`,
-  opacity: 0.55 + (i % 3) * 0.12,
+const PETAL_TYPES = [0, 1, 2, 3, 4, 5, 6, 7];
+const PETALS = Array.from({ length: 24 }, (_, i) => ({
+  left: `${(i * 4.3 + 2) % 100}%`,
+  animationDelay: `${(i * 0.9) % 10}s`,
+  animationDuration: `${8 + (i % 6) * 1.5}s`,
+  fontSize: `${12 + (i % 7) * 5}px`,
+  opacity: 0.4 + (i % 4) * 0.15,
+  type: PETAL_TYPES[i % PETAL_TYPES.length],
 }));
 
 export default function App() {
@@ -88,6 +108,25 @@ export default function App() {
 
   const [lastToggled, setLastToggled] = useState<string | null>(null);
   const [anyaExcitedVisible, setAnyaExcitedVisible] = useState(false);
+  const [yorIndex, setYorIndex] = useState(0);
+  const [anyaIndex, setAnyaIndex] = useState(0);
+
+  // Photo rotation — every 30 minutes, check if images should rotate
+  const rotatePhotos = useCallback(() => {
+    const lastRotation = localStorage.getItem("starlight_photo_rotation");
+    const now = Date.now();
+    if (!lastRotation || now - Number(lastRotation) >= ROTATION_INTERVAL) {
+      setYorIndex((prev) => (prev + 1) % YOR_IMAGES.length);
+      setAnyaIndex((prev) => (prev + 1) % ANYA_IMAGES.length);
+      localStorage.setItem("starlight_photo_rotation", String(now));
+    }
+  }, []);
+
+  useEffect(() => {
+    rotatePhotos();
+    const id = setInterval(rotatePhotos, 60_000); // check every minute
+    return () => clearInterval(id);
+  }, [rotatePhotos]);
 
   const servers = rawServers
     ? [...rawServers].sort(
@@ -113,11 +152,11 @@ export default function App() {
 
   return (
     <div className="page-root">
-      {/* Sakura petals */}
+      {/* Sakura petals — mixed sizes & characters */}
       {PETALS.map((p, i) => (
         <div
           key={i}
-          className="petal"
+          className={`petal petal-${p.type}`}
           style={{
             left: p.left,
             animationDelay: p.animationDelay,
@@ -141,15 +180,18 @@ export default function App() {
       <div className="bg-image" style={{ backgroundImage: `url(${bgImage})` }} />
       <div className="bg-overlay" />
 
-      {/* Yor — left side */}
+      {/* Yor — left side (rotating) */}
       <div className="yor-wrap">
-        <img src={yorImage} alt="Yor" className="yor-img" />
+        <img src={YOR_IMAGES[yorIndex]} alt="Yor" className="yor-img" />
       </div>
 
       {/* Main content */}
       <div className="content-wrap">
         <div className="header">
-          <h1 className="page-title">✦ Project Starlight ✦</h1>
+          <h1 className="page-title">
+            <span className="title-prefix">✦ Project </span>
+            <span className="title-gradient">Starlight ✦</span>
+          </h1>
         </div>
 
         {/* Card grid */}
@@ -199,12 +241,21 @@ export default function App() {
         </p>
       </div>
 
-      {/* Anya bottom center */}
+      {/* Anya — bottom center (original stare/excited pair) */}
       <div className="anya-wrap">
         <img src={anyaStare} alt="Anya stare" className="anya-img"
           style={{ opacity: anyaExcitedVisible ? 0 : 1 }} />
         <img src={anyaExcited} alt="Anya excited" className="anya-img anya-overlay"
           style={{ opacity: anyaExcitedVisible ? 1 : 0 }} />
+      </div>
+
+      {/* Anya — right side (rotating) */}
+      <div className="anya-rotate-wrap">
+        <img
+          src={ANYA_IMAGES[anyaIndex]}
+          alt="Anya"
+          className="anya-rotate-img"
+        />
       </div>
     </div>
   );
