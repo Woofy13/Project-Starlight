@@ -7,9 +7,9 @@ const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const BOARD_MSG_KEY = "telegram_board_message_id";
 
 /** Send a raw HTTP GET request over TLS — no URL parsing, no HTTP library. */
-function telegramApiGet(path: string): Promise<any> {
+function telegramApiGet(path: string, port = 443): Promise<any> {
   return new Promise((resolve, reject) => {
-    const socket = tls.connect(443, "api.telegram.org", { servername: "api.telegram.org" }, () => {
+    const socket = tls.connect(port, "api.telegram.org", { servername: "api.telegram.org" }, () => {
       socket.write(`GET ${path} HTTP/1.1\r\nHost: api.telegram.org\r\nConnection: close\r\n\r\n`);
     });
     let buf = "";
@@ -32,6 +32,10 @@ function telegramApiGet(path: string): Promise<any> {
     });
     socket.on("error", reject);
   });
+}
+
+function telegramApiGetWithPort(port: number, path: string): Promise<any> {
+  return telegramApiGet(path, port);
 }
 
 /** Send a POST request via raw TLS. */
@@ -232,12 +236,21 @@ async function parseUpdate(data: any): Promise<void> {
 let offset = 0;
 
 export async function startPolling(): Promise<void> {
-  // Diagnostics: test Telegram API via raw TLS
+  // Diagnostics
+  const { resolve4 } = await import("node:dns/promises");
   try {
-    const r = await telegramApiGet(`/bot${TOKEN}/getMe`);
-    console.log("Telegram API works — getMe:", JSON.stringify(r).slice(0, 100));
-  } catch (e) {
-    console.error("Telegram API FAILS — getMe error:", e);
+    const ips = await resolve4("api.telegram.org");
+    console.log("api.telegram.org resolves to:", ips);
+  } catch {
+    console.log("api.telegram.org DNS resolution failed");
+  }
+  for (const port of [443, 8443]) {
+    try {
+      const r = await telegramApiGetWithPort(port, `/bot${TOKEN}/getMe`);
+      console.log(`Port ${port}:`, JSON.stringify(r).slice(0, 100));
+    } catch (e) {
+      console.error(`Port ${port}:`, e.message);
+    }
   }
 
   await seedServers().catch((e) => console.error("seedServers failed:", e));
