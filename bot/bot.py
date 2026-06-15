@@ -1,5 +1,5 @@
 import os, asyncio, logging, threading
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 import asyncpg
@@ -8,6 +8,8 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 log = logging.getLogger(__name__)
+
+SGT = timezone(timedelta(hours=8))
 
 TOKEN = os.environ["TELEGRAM_BOT_TOKEN"].strip()
 CHAT_ID = os.environ["TELEGRAM_CHAT_ID"].strip()
@@ -80,8 +82,9 @@ async def toggle_server(pool, server_id: str):
 def to_sgt(dt):
     if dt is None:
         return None
-    sgt = dt.astimezone(timezone.utc)
-    return sgt.strftime("%I:%M %p").lstrip("0") if dt.tzinfo else dt.strftime("%I:%M %p").lstrip("0")
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(SGT).strftime("%I:%M %p").lstrip("0")
 
 
 def build_board(rows):
