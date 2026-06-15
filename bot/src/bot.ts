@@ -7,24 +7,29 @@ const TELEGRAM_API = `https://api.telegram.org/bot${TOKEN}`;
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const BOARD_MSG_KEY = "telegram_board_message_id";
 
-function httpsGet(urlStr: string): Promise<any> {
+function httpsGet(path: string): Promise<any> {
   return new Promise((resolve, reject) => {
-    https.get(urlStr, (res) => {
-      let data = "";
-      res.on("data", (chunk) => (data += chunk));
-      res.on("end", () => {
-        try {
-          const parsed = JSON.parse(data);
-          if (res.statusCode && res.statusCode >= 400) {
-            reject(new Error(`HTTP ${res.statusCode}: ${parsed.description || data}`));
-          } else {
-            resolve(parsed);
+    const req = https.request(
+      { hostname: "api.telegram.org", port: 443, path, method: "GET" },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk) => (data += chunk));
+        res.on("end", () => {
+          try {
+            const parsed = JSON.parse(data);
+            if (res.statusCode && res.statusCode >= 400) {
+              reject(new Error(`HTTP ${res.statusCode}: ${parsed.description || data}`));
+            } else {
+              resolve(parsed);
+            }
+          } catch {
+            reject(new Error(`Status ${res.statusCode}: ${data}`));
           }
-        } catch {
-          reject(new Error(`Status ${res.statusCode}: ${data}`));
-        }
-      });
-    }).on("error", reject);
+        });
+      }
+    );
+    req.on("error", reject);
+    req.end();
   });
 }
 
@@ -210,7 +215,7 @@ export async function startPolling(): Promise<void> {
     ++pollCount;
     try {
       const data = await httpsGet(
-        `${TELEGRAM_API}/getUpdates?offset=${offset}&timeout=30`
+        `/bot${TOKEN}/getUpdates?offset=${offset}&timeout=30`
       );
 
       if (data?.ok && Array.isArray(data.result)) {
