@@ -1,7 +1,8 @@
 import { eq } from "drizzle-orm";
 import { db, serverStatesTable, botConfigTable } from "@workspace/db";
 
-const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
+const TOKEN = process.env.TELEGRAM_BOT_TOKEN!.trim().replace(/:/g, '%3A');
+const TELEGRAM_API = `https://api.telegram.org/bot${TOKEN}`;
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const BOARD_MSG_KEY = "telegram_board_message_id";
 
