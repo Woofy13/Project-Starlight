@@ -153,23 +153,16 @@ export async function handleToggle(serverId: string): Promise<void> {
   await sendOrUpdateStatusBoard();
 }
 
-function parseUpdate(data: any): void {
-  // Handle callback query (inline button press)
+async function parseUpdate(data: any): Promise<void> {
   if (data?.callback_query) {
     const cq = data.callback_query;
-    const callbackId: string = cq.id;
-    const callbackData: string = cq.data ?? "";
-
-    telegramPost("answerCallbackQuery", { callback_query_id: callbackId });
-
-    if (callbackData.startsWith("toggle:")) {
-      const serverId = callbackData.slice("toggle:".length);
-      handleToggle(serverId).catch(() => {});
+    await telegramPost("answerCallbackQuery", { callback_query_id: cq.id }).catch(() => {});
+    if (cq.data?.startsWith("toggle:")) {
+      handleToggle(cq.data.slice("toggle:".length)).catch(() => {});
     }
     return;
   }
 
-  // Handle commands
   const text: string = data?.message?.text ?? "";
   if (text === "/start" || text === "/status") {
     sendOrUpdateStatusBoard().catch(() => {});
@@ -186,14 +179,17 @@ export async function startPolling(): Promise<void> {
 
   while (true) {
     try {
-      const res = await fetch(
-        `${TELEGRAM_API}/getUpdates?offset=${offset}&timeout=30&allowed_updates=["message","callback_query"]`
-      );
+      const params = new URLSearchParams({
+        offset: String(offset),
+        timeout: "30",
+        allowed_updates: JSON.stringify(["message", "callback_query"]),
+      });
+      const res = await fetch(`${TELEGRAM_API}/getUpdates?${params}`);
       const data = await res.json();
 
       if (data?.ok && Array.isArray(data.result)) {
         for (const update of data.result) {
-          parseUpdate(update);
+          await parseUpdate(update);
           offset = update.update_id + 1;
         }
       }
