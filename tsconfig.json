@@ -1,9 +1,0 @@
-{
-  "extends": "./tsconfig.base.json",
-  "compileOnSave": false,
-  "files": [],
-  "references": [
-    { "path": "./bot" },
-    { "path": "./lib/db" }
-  ]
-}
