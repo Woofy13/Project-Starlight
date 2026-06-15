@@ -1,35 +1,67 @@
 import { eq } from "drizzle-orm";
 import { db, serverStatesTable, botConfigTable } from "@workspace/db";
-import https from "node:https";
+import tls from "node:tls";
 
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN!.trim();
-const TELEGRAM_API = `https://api.telegram.org/bot${TOKEN}`;
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const BOARD_MSG_KEY = "telegram_board_message_id";
 
-function httpsGet(path: string): Promise<any> {
+/** Send a raw HTTP GET request over TLS — no URL parsing, no HTTP library. */
+function telegramApiGet(path: string): Promise<any> {
   return new Promise((resolve, reject) => {
-    const req = https.request(
-      { hostname: "api.telegram.org", port: 443, path, method: "GET", headers: { Host: "api.telegram.org" } },
-      (res) => {
-        let data = "";
-        res.on("data", (chunk) => (data += chunk));
-        res.on("end", () => {
-          try {
-            const parsed = JSON.parse(data);
-            if (res.statusCode && res.statusCode >= 400) {
-              reject(new Error(`HTTP ${res.statusCode}: ${parsed.description || data}`));
-            } else {
-              resolve(parsed);
-            }
-          } catch {
-            reject(new Error(`Status ${res.statusCode}: ${data}`));
-          }
-        });
+    const socket = tls.connect(443, "api.telegram.org", { servername: "api.telegram.org" }, () => {
+      socket.write(`GET ${path} HTTP/1.1\r\nHost: api.telegram.org\r\nConnection: close\r\n\r\n`);
+    });
+    let buf = "";
+    socket.on("data", (chunk) => (buf += chunk));
+    socket.on("end", () => {
+      const parts = buf.split("\r\n\r\n");
+      const statusLine = parts[0].split("\r\n")[0];
+      const statusCode = parseInt(statusLine.split(" ")[1], 10);
+      const body = parts.slice(1).join("\r\n\r\n");
+      try {
+        const parsed = JSON.parse(body);
+        if (statusCode >= 400) {
+          reject(new Error(`HTTP ${statusCode}: ${parsed.description || body}`));
+        } else {
+          resolve(parsed);
+        }
+      } catch {
+        reject(new Error(`Status ${statusCode}: ${body}`));
       }
-    );
-    req.on("error", reject);
-    req.end();
+    });
+    socket.on("error", reject);
+  });
+}
+
+/** Send a POST request via raw TLS. */
+function telegramApiPost(method: string, body: object): Promise<any> {
+  const json = JSON.stringify(body);
+  return new Promise((resolve, reject) => {
+    const socket = tls.connect(443, "api.telegram.org", { servername: "api.telegram.org" }, () => {
+      socket.write(
+        `POST /bot${TOKEN}/${method} HTTP/1.1\r\nHost: api.telegram.org\r\nContent-Type: application/json\r\nContent-Length: ${json.length}\r\nConnection: close\r\n\r\n${json}`
+      );
+    });
+    let buf = "";
+    socket.on("data", (chunk) => (buf += chunk));
+    socket.on("end", () => {
+      const parts = buf.split("\r\n\r\n");
+      const statusLine = parts[0].split("\r\n")[0];
+      const statusCode = parseInt(statusLine.split(" ")[1], 10);
+      const body = parts.slice(1).join("\r\n\r\n");
+      try {
+        const parsed = JSON.parse(body);
+        if (statusCode >= 400) {
+          reject(new Error(`HTTP ${statusCode}: ${parsed.description || body}`));
+        } else {
+          resolve(parsed);
+        }
+      } catch {
+        reject(new Error(`Status ${statusCode}: ${body}`));
+      }
+    });
+    socket.on("error", reject);
   });
 }
 
@@ -93,12 +125,7 @@ function buildKeyboard(): object {
 }
 
 async function telegramPost(method: string, body: object): Promise<any> {
-  const res = await fetch(`${TELEGRAM_API}/${method}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  return res.json();
+  return telegramApiPost(method, body);
 }
 
 async function getBoardMessageId(): Promise<number | null> {
@@ -205,19 +232,12 @@ async function parseUpdate(data: any): Promise<void> {
 let offset = 0;
 
 export async function startPolling(): Promise<void> {
-  // Diagnostics: test API via fetch (POST) and https (GET)
+  // Diagnostics: test Telegram API via raw TLS
   try {
-    const fetchResult = await fetch(`${TELEGRAM_API}/getMe`, { method: "GET" });
-    const fetchJson = await fetchResult.json();
-    console.log("fetch getMe:", JSON.stringify(fetchJson).slice(0, 120));
+    const r = await telegramApiGet(`/bot${TOKEN}/getMe`);
+    console.log("Telegram API works — getMe:", JSON.stringify(r).slice(0, 100));
   } catch (e) {
-    console.error("fetch getMe error:", e);
-  }
-  try {
-    const httpsResult = await httpsGet(`/bot${TOKEN}/getMe`);
-    console.log("https getMe:", JSON.stringify(httpsResult).slice(0, 120));
-  } catch (e) {
-    console.error("https getMe error:", e);
+    console.error("Telegram API FAILS — getMe error:", e);
   }
 
   await seedServers().catch((e) => console.error("seedServers failed:", e));
@@ -229,7 +249,7 @@ export async function startPolling(): Promise<void> {
   while (true) {
     ++pollCount;
     try {
-      const data = await httpsGet(
+      const data = await telegramApiGet(
         `/bot${TOKEN}/getUpdates?offset=${offset}&timeout=30`
       );
 
