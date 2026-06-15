@@ -1,0 +1,186 @@
+Replace the entire contents of artifacts/api-server/src/routes/servers.ts with the following code exactly as written, do not modify anything:
+typescriptimport { Router, type IRouter } from "express";
+import { eq } from "drizzle-orm";
+import { db, serverStatesTable } from "@workspace/db";
+import {
+  ListServersResponse,
+  UpdateServerStatusBody,
+  UpdateServerStatusResponse,
+} from "@workspace/api-zod";
+
+const router: IRouter = Router();
+
+// ── Telegram config ────────────────────────────────────────────────────────
+const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}`;
+const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+
+// Persists the single status-board message ID for the lifetime of the server process.
+// If the server restarts a new board message will be created automatically.
+let statusBoardMessageId: number | null = null;
+
+// ── Seed servers ───────────────────────────────────────────────────────────
+const SEED_SERVERS = [
+  { id: "mio", name: "Mio" },
+  { id: "bo", name: "Bo" },
+  { id: "aaryn", name: "Aaryn" },
+  { id: "new-tunes", name: "New Tunes" },
+];
+
+async function seedServers(): Promise<void> {
+  for (const s of SEED_SERVERS) {
+    await db
+      .insert(serverStatesTable)
+      .values({ id: s.id, name: s.name, status: "off", updatedAt: null })
+      .onConflictDoNothing();
+  }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+/** Format a Date to SGT (GMT+8) in "h:mm am/pm" format e.g. "1:44 pm" */
+function toSGT(date: Date): string {
+  return date.toLocaleTimeString("en-SG", {
+    timeZone: "Asia/Singapore",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+/** Build the full status board message string from current DB rows */
+function buildBoard(rows: { name: string; status: string; updatedAt: Date | null }[]): string {
+  const lines = rows.map((r) => {
+    if (r.status === "on") {
+      const since = r.updatedAt ? toSGT(r.updatedAt) : "unknown";
+      return `🔴 ${r.name} — In Use (Since ${since} SGT)`;
+    }
+    return `🟢 ${r.name} — Free`;
+  });
+
+  const updated = toSGT(new Date());
+
+  return [
+    "📡 *Project Starlight — Live Status*",
+    "─────────────────",
+    ...lines,
+    "─────────────────",
+    `🕐 Updated: ${updated} SGT`,
+  ].join("\n");
+}
+
+// ── Telegram helpers ───────────────────────────────────────────────────────
+
+async function telegramPost(method: string, body: object): Promise<any> {
+  const res = await fetch(`${TELEGRAM_API}/${method}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}
+
+async function sendOrUpdateStatusBoard(): Promise<void> {
+  if (!process.env.TELEGRAM_TOKEN || !CHAT_ID) return;
+
+  try {
+    const rows = await db
+      .select()
+      .from(serverStatesTable)
+      .orderBy(serverStatesTable.name);
+
+    const text = buildBoard(rows);
+
+    if (statusBoardMessageId === null) {
+      const sent = await telegramPost("sendMessage", {
+        chat_id: CHAT_ID,
+        text,
+        parse_mode: "Markdown",
+      });
+
+      if (sent?.ok && sent?.result?.message_id) {
+        statusBoardMessageId = sent.result.message_id;
+
+        await telegramPost("pinChatMessage", {
+          chat_id: CHAT_ID,
+          message_id: statusBoardMessageId,
+          disable_notification: true,
+        });
+      }
+    } else {
+      await telegramPost("editMessageText", {
+        chat_id: CHAT_ID,
+        message_id: statusBoardMessageId,
+        text,
+        parse_mode: "Markdown",
+      });
+    }
+  } catch {
+    // Non-fatal — never block the API response
+  }
+}
+
+// ── Routes ─────────────────────────────────────────────────────────────────
+
+router.get("/servers", async (req, res): Promise<void> => {
+  await seedServers();
+  const rows = await db
+    .select()
+    .from(serverStatesTable)
+    .orderBy(serverStatesTable.name);
+  res.json(
+    ListServersResponse.parse(
+      rows.map((r) => ({
+        ...r,
+        updatedAt: r.updatedAt ? r.updatedAt.toISOString() : null,
+      }))
+    )
+  );
+});
+
+router.patch("/servers/:id", async (req, res): Promise<void> => {
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+
+  const parsed = UpdateServerStatusBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const newStatus = parsed.data.status;
+
+  const [existing] = await db
+    .select()
+    .from(serverStatesTable)
+    .where(eq(serverStatesTable.id, id));
+
+  if (!existing) {
+    res.status(404).json({ error: "Server not found" });
+    return;
+  }
+
+  const now = new Date();
+
+  const [row] = await db
+    .update(serverStatesTable)
+    .set({ status: newStatus, updatedAt: now })
+    .where(eq(serverStatesTable.id, id))
+    .returning();
+
+  if (!row) {
+    res.status(404).json({ error: "Server not found" });
+    return;
+  }
+
+  res.json(
+    UpdateServerStatusResponse.parse({
+      ...row,
+      updatedAt: row.updatedAt ? row.updatedAt.toISOString() : null,
+    })
+  );
+
+  if (existing.status !== newStatus) {
+    sendOrUpdateStatusBoard().catch(() => {});
+  }
+});
+
+export default router;
