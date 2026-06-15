@@ -10,7 +10,7 @@ const BOARD_MSG_KEY = "telegram_board_message_id";
 function httpsGet(path: string): Promise<any> {
   return new Promise((resolve, reject) => {
     const req = https.request(
-      { hostname: "api.telegram.org", port: 443, path, method: "GET" },
+      { hostname: "api.telegram.org", port: 443, path, method: "GET", headers: { Host: "api.telegram.org" } },
       (res) => {
         let data = "";
         res.on("data", (chunk) => (data += chunk));
@@ -205,6 +205,21 @@ async function parseUpdate(data: any): Promise<void> {
 let offset = 0;
 
 export async function startPolling(): Promise<void> {
+  // Diagnostics: test API via fetch (POST) and https (GET)
+  try {
+    const fetchResult = await fetch(`${TELEGRAM_API}/getMe`, { method: "GET" });
+    const fetchJson = await fetchResult.json();
+    console.log("fetch getMe:", JSON.stringify(fetchJson).slice(0, 120));
+  } catch (e) {
+    console.error("fetch getMe error:", e);
+  }
+  try {
+    const httpsResult = await httpsGet(`/bot${TOKEN}/getMe`);
+    console.log("https getMe:", JSON.stringify(httpsResult).slice(0, 120));
+  } catch (e) {
+    console.error("https getMe error:", e);
+  }
+
   await seedServers().catch((e) => console.error("seedServers failed:", e));
   await sendOrUpdateStatusBoard().catch((e) => console.error("sendOrUpdateStatusBoard failed:", e));
 
