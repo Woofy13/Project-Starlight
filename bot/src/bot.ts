@@ -154,26 +154,31 @@ export async function handleToggle(serverId: string): Promise<void> {
 }
 
 async function parseUpdate(data: any): Promise<void> {
+  console.log("Update received:", JSON.stringify(data).slice(0, 300));
   if (data?.callback_query) {
     const cq = data.callback_query;
-    await telegramPost("answerCallbackQuery", { callback_query_id: cq.id }).catch(() => {});
+    await telegramPost("answerCallbackQuery", { callback_query_id: cq.id }).catch((e) =>
+      console.error("answerCallbackQuery failed:", e)
+    );
     if (cq.data?.startsWith("toggle:")) {
-      handleToggle(cq.data.slice("toggle:".length)).catch(() => {});
+      const serverId = cq.data.slice("toggle:".length);
+      console.log(`Toggle for: ${serverId}`);
+      handleToggle(serverId).catch((e) => console.error("handleToggle failed:", e));
     }
     return;
   }
 
   const text: string = data?.message?.text ?? "";
   if (text === "/start" || text === "/status") {
-    sendOrUpdateStatusBoard().catch(() => {});
+    sendOrUpdateStatusBoard().catch((e) => console.error("sendOrUpdateStatusBoard failed:", e));
   }
 }
 
 let offset = 0;
 
 export async function startPolling(): Promise<void> {
-  await seedServers();
-  await sendOrUpdateStatusBoard();
+  await seedServers().catch((e) => console.error("seedServers failed:", e));
+  await sendOrUpdateStatusBoard().catch((e) => console.error("sendOrUpdateStatusBoard failed:", e));
 
   console.log("Bot started — polling for updates...");
 
@@ -188,10 +193,15 @@ export async function startPolling(): Promise<void> {
       const data = await res.json();
 
       if (data?.ok && Array.isArray(data.result)) {
-        for (const update of data.result) {
-          await parseUpdate(update);
-          offset = update.update_id + 1;
+        if (data.result.length > 0) {
+          console.log(`Got ${data.result.length} update(s)`);
+          for (const update of data.result) {
+            await parseUpdate(update);
+            offset = update.update_id + 1;
+          }
         }
+      } else {
+        console.error("Unexpected getUpdates response:", JSON.stringify(data).slice(0, 500));
       }
     } catch (err) {
       console.error("Polling error:", err);
