@@ -182,29 +182,27 @@ export async function startPolling(): Promise<void> {
 
   console.log("Bot started — polling for updates...");
 
+  let pollCount = 0;
   while (true) {
+    ++pollCount;
     try {
-      const params = new URLSearchParams({
-        offset: String(offset),
-        timeout: "30",
-        allowed_updates: JSON.stringify(["message", "callback_query"]),
-      });
+      const params = new URLSearchParams({ offset: String(offset), timeout: "30" });
       const res = await fetch(`${TELEGRAM_API}/getUpdates?${params}`);
       const data = await res.json();
 
       if (data?.ok && Array.isArray(data.result)) {
         if (data.result.length > 0) {
-          console.log(`Got ${data.result.length} update(s)`);
+          console.log(`[${pollCount}] Got ${data.result.length} update(s)`);
           for (const update of data.result) {
             await parseUpdate(update);
             offset = update.update_id + 1;
           }
         }
       } else {
-        console.error("Unexpected getUpdates response:", JSON.stringify(data).slice(0, 500));
+        console.error(`[${pollCount}] getUpdates not ok:`, JSON.stringify(data).slice(0, 200));
       }
     } catch (err) {
-      console.error("Polling error:", err);
+      console.error(`[${pollCount}] Polling error:`, err);
       await new Promise((r) => setTimeout(r, 5000));
     }
   }
