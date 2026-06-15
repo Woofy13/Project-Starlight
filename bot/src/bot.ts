@@ -1,10 +1,32 @@
 import { eq } from "drizzle-orm";
 import { db, serverStatesTable, botConfigTable } from "@workspace/db";
+import https from "node:https";
 
-const TOKEN = process.env.TELEGRAM_BOT_TOKEN!.trim().replace(/:/g, '%3A');
+const TOKEN = process.env.TELEGRAM_BOT_TOKEN!.trim();
 const TELEGRAM_API = `https://api.telegram.org/bot${TOKEN}`;
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const BOARD_MSG_KEY = "telegram_board_message_id";
+
+function httpsGet(urlStr: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    https.get(urlStr, (res) => {
+      let data = "";
+      res.on("data", (chunk) => (data += chunk));
+      res.on("end", () => {
+        try {
+          const parsed = JSON.parse(data);
+          if (res.statusCode && res.statusCode >= 400) {
+            reject(new Error(`HTTP ${res.statusCode}: ${parsed.description || data}`));
+          } else {
+            resolve(parsed);
+          }
+        } catch {
+          reject(new Error(`Status ${res.statusCode}: ${data}`));
+        }
+      });
+    }).on("error", reject);
+  });
+}
 
 const SEED_SERVERS = [
   { id: "mio",       name: "Mio" },
@@ -187,9 +209,9 @@ export async function startPolling(): Promise<void> {
   while (true) {
     ++pollCount;
     try {
-      const params = new URLSearchParams({ offset: String(offset), timeout: "30" });
-      const res = await fetch(`${TELEGRAM_API}/getUpdates?${params}`);
-      const data = await res.json();
+      const data = await httpsGet(
+        `${TELEGRAM_API}/getUpdates?offset=${offset}&timeout=30`
+      );
 
       if (data?.ok && Array.isArray(data.result)) {
         if (data.result.length > 0) {
