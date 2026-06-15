@@ -1,3 +1,4 @@
+import { createServer } from "node:http";
 import { startPolling } from "./bot";
 
 const required = ["TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "DATABASE_URL"];
@@ -7,6 +8,12 @@ for (const env of required) {
     process.exit(1);
   }
 }
+
+const port = parseInt(process.env.PORT || "10000", 10);
+createServer((_req, res) => {
+  res.writeHead(200, { "Content-Type": "text/plain" });
+  res.end("ok");
+}).listen(port, () => console.log(`Health server listening on ${port}`));
 
 startPolling().catch((err) => {
   console.error("Fatal error:", err);
