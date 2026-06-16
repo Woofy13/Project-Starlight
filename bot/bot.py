@@ -183,22 +183,28 @@ def run_health_server():
     HTTPServer(("0.0.0.0", port), HealthHandler).serve_forever()
 
 
-async def main():
+async def post_init(app: Application):
     pool = await get_pool()
-    await seed(pool)
-
-    app = Application.builder().token(TOKEN).build()
     app.bot_data["pool"] = pool
+    await seed(pool)
+    await send_or_update_board(app, pool)
 
+
+def main():
+    app = (
+        Application.builder()
+        .token(TOKEN)
+        .post_init(post_init)
+        .build()
+    )
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("status", cmd_start))
     app.add_handler(CallbackQueryHandler(callback_toggle, pattern="^toggle:"))
 
-    await send_or_update_board(app, pool)
     log.info("Starting polling...")
-    await app.run_polling(allowed_updates=["message", "callback_query"])
+    app.run_polling(allowed_updates=["message", "callback_query"])
 
 
 if __name__ == "__main__":
     threading.Thread(target=run_health_server, daemon=True).start()
-    asyncio.run(main())
+    main()
