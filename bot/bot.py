@@ -163,10 +163,17 @@ async def callback_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 class HealthHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
+    def _ok(self):
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"ok")
+    do_GET = _ok
+    do_HEAD = _ok
+    do_POST = _ok
+    do_PUT = _ok
+    do_DELETE = _ok
+    do_OPTIONS = _ok
+    do_PATCH = _ok
     def log_message(self, *a):
         pass
 
