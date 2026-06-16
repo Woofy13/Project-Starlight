@@ -207,4 +207,5 @@ def main():
 
 if __name__ == "__main__":
     threading.Thread(target=run_health_server, daemon=True).start()
+    asyncio.set_event_loop(asyncio.new_event_loop())
     main()
