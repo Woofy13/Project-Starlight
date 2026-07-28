@@ -183,11 +183,29 @@ def run_health_server():
     HTTPServer(("0.0.0.0", port), HealthHandler).serve_forever()
 
 
+async def reset_all_servers(pool):
+    async with pool.acquire() as conn:
+        await conn.execute("UPDATE server_states SET status = 'off', updated_at = NULL")
+
+
+async def daily_reset_loop(app, pool):
+    while True:
+        now = datetime.now(SGT)
+        target = now.replace(hour=5, minute=0, second=0, microsecond=0)
+        if now >= target:
+            target += timedelta(days=1)
+        await asyncio.sleep((target - now).total_seconds())
+        log.info("Daily reset: setting all servers to free")
+        await reset_all_servers(pool)
+        await send_or_update_board(app, pool)
+
+
 async def post_init(app: Application):
     pool = await get_pool()
     app.bot_data["pool"] = pool
     await seed(pool)
     await send_or_update_board(app, pool)
+    asyncio.create_task(daily_reset_loop(app, pool))
 
 
 def main():
