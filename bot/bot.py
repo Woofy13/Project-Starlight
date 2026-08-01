@@ -4,6 +4,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 
 import asyncpg
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.error import BadRequest
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
@@ -140,7 +141,13 @@ async def send_or_update_board(application, pool):
                 parse_mode="Markdown",
                 reply_markup=markup,
             )
-        except Exception:
+        except BadRequest as e:
+            if "message is not modified" in str(e):
+                return
+            try:
+                await application.bot.delete_message(chat_id=CHAT_ID, message_id=board_msg_id)
+            except BadRequest:
+                pass
             await delete_board_msg_id(pool)
             await send_or_update_board(application, pool)
 
