@@ -4,7 +4,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 
 import asyncpg
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.error import BadRequest
+from telegram.error import BadRequest, TelegramError
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
@@ -114,42 +114,58 @@ def build_keyboard():
     return InlineKeyboardMarkup([buttons])
 
 
-async def send_or_update_board(application, pool):
-    servers = await get_servers(pool)
-    text = build_board(servers)
-    markup = build_keyboard()
-    board_msg_id = await get_board_msg_id(pool)
+def get_board_lock(application):
+    lock = application.bot_data.get("board_lock")
+    if lock is None:
+        lock = asyncio.Lock()
+        application.bot_data["board_lock"] = lock
+    return lock
 
-    if board_msg_id is None:
+
+async def send_or_update_board(application, pool):
+    async with get_board_lock(application):
+        servers = await get_servers(pool)
+        text = build_board(servers)
+        markup = build_keyboard()
+        board_msg_id = await get_board_msg_id(pool)
+
+        if board_msg_id is not None:
+            try:
+                await application.bot.edit_message_text(
+                    chat_id=CHAT_ID,
+                    message_id=board_msg_id,
+                    text=text,
+                    parse_mode="Markdown",
+                    reply_markup=markup,
+                )
+                return
+            except BadRequest as e:
+                if "not modified" in str(e).lower():
+                    return
+                log.warning("Board edit failed, recreating card: %s", e)
+                try:
+                    await application.bot.delete_message(
+                        chat_id=CHAT_ID, message_id=board_msg_id
+                    )
+                except TelegramError as de:
+                    log.warning("Could not delete old card %s: %s", board_msg_id, de)
+                await delete_board_msg_id(pool)
+
         msg = await application.bot.send_message(
             chat_id=CHAT_ID,
             text=text,
             parse_mode="Markdown",
             reply_markup=markup,
         )
-        if msg and msg.message_id:
-            await save_board_msg_id(pool, msg.message_id)
+        if not msg or not msg.message_id:
+            return
+        await save_board_msg_id(pool, msg.message_id)
+        try:
             await application.bot.pin_chat_message(
                 chat_id=CHAT_ID, message_id=msg.message_id, disable_notification=True
             )
-    else:
-        try:
-            await application.bot.edit_message_text(
-                chat_id=CHAT_ID,
-                message_id=board_msg_id,
-                text=text,
-                parse_mode="Markdown",
-                reply_markup=markup,
-            )
-        except BadRequest as e:
-            if "message is not modified" in str(e):
-                return
-            try:
-                await application.bot.delete_message(chat_id=CHAT_ID, message_id=board_msg_id)
-            except BadRequest:
-                pass
-            await delete_board_msg_id(pool)
-            await send_or_update_board(application, pool)
+        except TelegramError as pe:
+            log.warning("Could not pin card %s: %s", msg.message_id, pe)
 
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
