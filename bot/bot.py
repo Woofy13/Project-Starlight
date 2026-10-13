@@ -21,8 +21,9 @@ SERVERS = {
     "bo": "Bo",
     "aaryn": "Aaryn",
     "new-tunes": "New Tunes",
+    "horse": "Horse",
 }
-SERVER_ORDER = ["mio", "bo", "new-tunes", "aaryn"]
+SERVER_ORDER = ["mio", "bo", "new-tunes", "aaryn", "horse"]
 BOARD_MSG_KEY = "telegram_board_message_id"
 
 
