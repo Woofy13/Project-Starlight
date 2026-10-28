@@ -33,6 +33,9 @@ async def get_pool():
 
 async def seed(pool):
     async with pool.acquire() as conn:
+        await conn.execute(
+            "ALTER TABLE server_states ADD COLUMN IF NOT EXISTS updated_by text"
+        )
         for sid, name in SERVERS.items():
             await conn.execute(
                 "INSERT INTO server_states (id, name, status) VALUES ($1, $2, 'off') ON CONFLICT (id) DO NOTHING",
@@ -67,17 +70,22 @@ async def get_servers(pool):
         return await conn.fetch("SELECT * FROM server_states")
 
 
-async def toggle_server(pool, server_id: str):
+async def set_server_state(pool, server_id: str, actor: str, turn_on: bool):
     async with pool.acquire() as conn:
-        row = await conn.fetchrow(
-            "SELECT status FROM server_states WHERE id = $1", server_id
-        )
-        if not row:
-            return
-        new_status = "off" if row["status"] == "on" else "on"
-        await conn.execute(
-            "UPDATE server_states SET status = $1, updated_at = NOW() WHERE id = $2",
-            new_status, server_id,
+        if turn_on:
+            return await conn.fetchrow(
+                "UPDATE server_states "
+                "SET status = 'on', updated_at = NOW(), updated_by = $2 "
+                "WHERE id = $1 AND status = 'off' "
+                "RETURNING status, updated_at, updated_by",
+                server_id, actor,
+            )
+        return await conn.fetchrow(
+            "UPDATE server_states "
+            "SET status = 'off', updated_at = NULL, updated_by = NULL "
+            "WHERE id = $1 AND status = 'on' AND (updated_by = $2 OR updated_by IS NULL) "
+            "RETURNING status, updated_at, updated_by",
+            server_id, actor,
         )
 
 
@@ -89,13 +97,29 @@ def to_sgt(dt):
     return dt.astimezone(SGT).strftime("%I:%M %p").lstrip("0")
 
 
+def display_name(user):
+    if user is None:
+        return "Unknown"
+    return user.username or user.first_name or "Unknown"
+
+
+def escape_md(text):
+    for ch in ("\\", "_", "*", "`", "["):
+        text = text.replace(ch, "\\" + ch)
+    return text
+
+
 def build_board(rows):
     sorted_rows = sorted(rows, key=lambda r: SERVER_ORDER.index(r["id"]) if r["id"] in SERVER_ORDER else 99)
     lines = []
     for r in sorted_rows:
         if r["status"] == "on":
             since = to_sgt(r["updated_at"]) or "unknown"
-            lines.append(f"🔴 {r['name']} — In Use (Since {since})")
+            by = r.get("updated_by")
+            if by:
+                lines.append(f"🔴 {r['name']} — In Use (by {escape_md(by)} since {since})")
+            else:
+                lines.append(f"🔴 {r['name']} — In Use (Since {since})")
         else:
             lines.append(f"🟢 {r['name']} — Free")
     now = datetime.now(timezone.utc)
@@ -123,50 +147,61 @@ def get_board_lock(application):
     return lock
 
 
-async def send_or_update_board(application, pool):
-    async with get_board_lock(application):
-        servers = await get_servers(pool)
-        text = build_board(servers)
-        markup = build_keyboard()
+async def _apply_board(application, pool, rows):
+    application.bot_data["servers"] = rows
+    text = build_board(rows)
+    markup = build_keyboard()
+    board_msg_id = application.bot_data.get("board_msg_id")
+    if board_msg_id is None:
         board_msg_id = await get_board_msg_id(pool)
+        application.bot_data["board_msg_id"] = board_msg_id
 
-        if board_msg_id is not None:
-            try:
-                await application.bot.edit_message_text(
-                    chat_id=CHAT_ID,
-                    message_id=board_msg_id,
-                    text=text,
-                    parse_mode="Markdown",
-                    reply_markup=markup,
-                )
-                return
-            except BadRequest as e:
-                if "not modified" in str(e).lower():
-                    return
-                log.warning("Board edit failed, recreating card: %s", e)
-                try:
-                    await application.bot.delete_message(
-                        chat_id=CHAT_ID, message_id=board_msg_id
-                    )
-                except TelegramError as de:
-                    log.warning("Could not delete old card %s: %s", board_msg_id, de)
-                await delete_board_msg_id(pool)
-
-        msg = await application.bot.send_message(
-            chat_id=CHAT_ID,
-            text=text,
-            parse_mode="Markdown",
-            reply_markup=markup,
-        )
-        if not msg or not msg.message_id:
-            return
-        await save_board_msg_id(pool, msg.message_id)
+    if board_msg_id is not None:
         try:
-            await application.bot.pin_chat_message(
-                chat_id=CHAT_ID, message_id=msg.message_id, disable_notification=True
+            await application.bot.edit_message_text(
+                chat_id=CHAT_ID,
+                message_id=board_msg_id,
+                text=text,
+                parse_mode="Markdown",
+                reply_markup=markup,
             )
-        except TelegramError as pe:
-            log.warning("Could not pin card %s: %s", msg.message_id, pe)
+            return
+        except BadRequest as e:
+            if "not modified" in str(e).lower():
+                return
+            log.warning("Board edit failed, recreating card: %s", e)
+            try:
+                await application.bot.delete_message(
+                    chat_id=CHAT_ID, message_id=board_msg_id
+                )
+            except TelegramError as de:
+                log.warning("Could not delete old card %s: %s", board_msg_id, de)
+            await delete_board_msg_id(pool)
+            application.bot_data["board_msg_id"] = None
+
+    msg = await application.bot.send_message(
+        chat_id=CHAT_ID,
+        text=text,
+        parse_mode="Markdown",
+        reply_markup=markup,
+    )
+    if not msg or not msg.message_id:
+        return
+    await save_board_msg_id(pool, msg.message_id)
+    application.bot_data["board_msg_id"] = msg.message_id
+    try:
+        await application.bot.pin_chat_message(
+            chat_id=CHAT_ID, message_id=msg.message_id, disable_notification=True
+        )
+    except TelegramError as pe:
+        log.warning("Could not pin card %s: %s", msg.message_id, pe)
+
+
+async def send_or_update_board(application, pool, rows=None):
+    async with get_board_lock(application):
+        if rows is None:
+            rows = [dict(r) for r in await get_servers(pool)]
+        await _apply_board(application, pool, rows)
 
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -179,11 +214,71 @@ async def callback_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if str(update.effective_chat.id) != CHAT_ID:
         return
     query = update.callback_query
-    await query.answer()
     server_id = query.data.replace("toggle:", "")
+    actor = display_name(update.effective_user)
+    app = context.application
     pool = context.bot_data["pool"]
-    await toggle_server(pool, server_id)
-    await send_or_update_board(context.application, pool)
+
+    async with get_board_lock(app):
+        rows = app.bot_data.get("servers")
+        if rows is None:
+            rows = [dict(r) for r in await get_servers(pool)]
+            app.bot_data["servers"] = rows
+
+        current = next((r for r in rows if r["id"] == server_id), None)
+        if current is None:
+            await query.answer()
+            return
+
+        owner = current.get("updated_by")
+        if current["status"] == "on" and owner is not None and owner != actor:
+            since = to_sgt(current["updated_at"]) or "unknown"
+            await query.answer(
+                text=f"{current['name']} is in use by {owner} since {since}",
+                show_alert=True,
+            )
+            return
+
+        await query.answer()
+
+        turning_on = current["status"] != "on"
+        now = datetime.now(timezone.utc)
+        optimistic = []
+        for r in rows:
+            d = dict(r)
+            if d["id"] == server_id:
+                if turning_on:
+                    d["status"] = "on"
+                    d["updated_at"] = now
+                    d["updated_by"] = actor
+                else:
+                    d["status"] = "off"
+                    d["updated_at"] = None
+                    d["updated_by"] = None
+            optimistic.append(d)
+
+        try:
+            await _apply_board(app, pool, optimistic)
+        except TelegramError as e:
+            log.warning("Could not push optimistic board for %s: %s", server_id, e)
+
+        try:
+            saved = await set_server_state(pool, server_id, actor, turning_on)
+        except Exception as e:
+            log.error("Failed to save toggle for %s: %s", server_id, e)
+            saved = None
+
+        if saved is None:
+            fresh = [dict(r) for r in await get_servers(pool)]
+            await _apply_board(app, pool, fresh)
+            return
+
+        for d in app.bot_data.get("servers", []):
+            if d["id"] == server_id:
+                d["status"] = saved["status"]
+                d["updated_at"] = saved["updated_at"]
+                d["updated_by"] = saved["updated_by"]
+                break
 
 
 class HealthHandler(BaseHTTPRequestHandler):
@@ -209,7 +304,9 @@ def run_health_server():
 
 async def reset_all_servers(pool):
     async with pool.acquire() as conn:
-        await conn.execute("UPDATE server_states SET status = 'off', updated_at = NULL")
+        await conn.execute(
+            "UPDATE server_states SET status = 'off', updated_at = NULL, updated_by = NULL"
+        )
 
 
 async def daily_reset_loop(app, pool):
