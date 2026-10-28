@@ -239,7 +239,7 @@ async def callback_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        await query.answer()
+        answer_task = asyncio.create_task(query.answer())
 
         turning_on = current["status"] != "on"
         now = datetime.now(timezone.utc)
@@ -261,6 +261,11 @@ async def callback_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await _apply_board(app, pool, optimistic)
         except TelegramError as e:
             log.warning("Could not push optimistic board for %s: %s", server_id, e)
+
+        try:
+            await answer_task
+        except TelegramError:
+            pass
 
         try:
             saved = await set_server_state(pool, server_id, actor, turning_on)
