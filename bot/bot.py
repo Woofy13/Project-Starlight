@@ -20,10 +20,9 @@ SERVERS = {
     "mio": "Mio",
     "bo": "Bo",
     "aaryn": "Aaryn",
-    "new-tunes": "New Tunes",
-    "horse": "Horse",
+    "marlon": "Marlon",
 }
-SERVER_ORDER = ["mio", "bo", "new-tunes", "aaryn", "horse"]
+SERVER_ORDER = ["mio", "bo", "marlon", "aaryn"]
 BOARD_MSG_KEY = "telegram_board_message_id"
 
 
@@ -41,6 +40,10 @@ async def seed(pool):
                 "INSERT INTO server_states (id, name, status) VALUES ($1, $2, 'off') ON CONFLICT (id) DO NOTHING",
                 sid, name,
             )
+        await conn.execute(
+            "DELETE FROM server_states WHERE id <> ALL($1::text[])",
+            list(SERVERS.keys()),
+        )
 
 
 async def get_board_msg_id(pool):
@@ -110,7 +113,10 @@ def escape_md(text):
 
 
 def build_board(rows):
-    sorted_rows = sorted(rows, key=lambda r: SERVER_ORDER.index(r["id"]) if r["id"] in SERVER_ORDER else 99)
+    sorted_rows = sorted(
+        (r for r in rows if r["id"] in SERVER_ORDER),
+        key=lambda r: SERVER_ORDER.index(r["id"]),
+    )
     lines = []
     for r in sorted_rows:
         if r["status"] == "on":
